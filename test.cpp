@@ -4,6 +4,7 @@
 #include <ctime>
 #include <sys/time.h>
 #include <cstdlib>
+
 using namespace std;
 //////////////////
 //     MAIN     //
@@ -21,29 +22,35 @@ long long timeval_diff(struct timeval *start_time, struct timeval *end_time)
   return 1000000LL*difference->tv_sec+difference->tv_usec;
 }
 
+block get_random_block() {
+    block res;
+    for (int i = 0; i < blocksize; ++i) {
+        res[i] = rand() % 2;
+    }
+    return res;
+}
 int main (int argc, char *argv[]) {
     // Example usage of the LowMC class
     // Instantiate a LowMC cipher instance called cipher using the key '1'.
-
+    srand(time(0));
     if (argc != 3) {
         cout << "Incorrect number of args!!!";
         return 0;
     }
     int ITER = atoi(argv[1]);
-    int HOW_MANY = atoi(argv[2]);
+    int FLAG = atoi(argv[2]);
 
-    LowMC cipher(1);
-    
+    LowMC cipher1(1, FLAG);
+    LowMC cipher2(1, !FLAG);
+    vector<block> plains(ITER);
+    for (int iter = 0; iter < ITER; ++iter) {
+        // plains[iter] = get_random_block();
+        plains[iter] = iter;
+    }
     timeval totalstartv, totalendv;
     gettimeofday(&totalstartv, NULL);
-
     for (int iter = 0; iter < ITER; ++iter) {
-        block m = iter;
-        std::cout << "Plaintext:" << std::endl;
-        std::cout << m << std::endl;
-        m = cipher.encrypt( m );
-        std::cout << "Ciphertext:" << std::endl;
-        std::cout << m << std::endl;
+        block m1 = cipher1.encrypt(plains[iter]);
     }
 
     gettimeofday(&totalendv, NULL);

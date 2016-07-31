@@ -11,11 +11,24 @@
 //     LowMC functions     //
 /////////////////////////////
 
-block LowMC::encrypt (const block message) {
+
+template<size_t bitsetsize>
+string write(bitset<bitsetsize> in) {
+    string str = "";
+    for (int i = 0; i < bitsetsize; ++i) {
+        if (in[i] == 0) {
+            str += "0";
+        } else {
+            str += "1";
+        }
+    }
+    return str;
+}
+block LowMC::encrypt (const block& message) {
     block c = message ^ roundkeys[0];
     for (unsigned r = 1; r <= rounds; ++r) {
         c =  Substitution(c);
-        c =  MultiplyWithGF2Matrix(LinMatrices[r-1], c);
+        c =  MultiplyWithGF2Matrix(LinMatrices[r-1], c, r-1);
         c ^= roundconstants[r-1];
         c ^= roundkeys[r];
     }
@@ -23,12 +36,12 @@ block LowMC::encrypt (const block message) {
 }
 
 
-block LowMC::decrypt (const block message) {
+block LowMC::decrypt (const block& message) {
     block c = message;
     for (unsigned r = rounds; r > 0; --r) {
         c ^= roundkeys[r];
         c ^= roundconstants[r-1];
-        c =  MultiplyWithGF2Matrix(invLinMatrices[r-1], c);
+        c =  MultiplyWithGF2Matrix(invLinMatrices[r-1], c, r);
         c =  invSubstitution(c);
     }
     c ^= roundkeys[0];
@@ -47,7 +60,7 @@ void LowMC::set_key (keyblock k) {
 /////////////////////////////
 
 
-block LowMC::Substitution (const block message) {
+block LowMC::Substitution (const block& message) {
     block temp = 0;
     //Get the identity part of the message
     temp ^= (message >> 3*numofboxes);
@@ -61,7 +74,8 @@ block LowMC::Substitution (const block message) {
 }
 
 
-block LowMC::invSubstitution (const block message) {
+block LowMC::invSubstitution (const block& message) {
+
     block temp = 0;
     //Get the identity part of the message
     temp ^= (message >> 3*numofboxes);
@@ -75,21 +89,57 @@ block LowMC::invSubstitution (const block message) {
 }
 
 
-block LowMC::MultiplyWithGF2Matrix
-        (const std::vector<block> matrix, const block message) {
+block LowMC::ClassicMul(const vector<block>& matrix, const block& message) {
     block temp = 0;
     for (unsigned i = 0; i < blocksize; ++i) {
-        temp[i] = (message & matrix[i]).count() % 2;
+        temp[i] = (message & matrix[i]).count() & 1;
     }
     return temp;
 }
 
+int LowMC::ReadBits(const vector<block>& matrix, int x, int y) {
+    int res = 0;
+    for (int i = 0; i < kBlock; ++i) {
+        res += matrix[x][y + i] * _two_powers[i];
+    }
+    return res;
+}
+block LowMC::GrundyMul(const vector<block>& matrix, const block& message) {
+
+    bitset<blocksize> res;
+
+
+    short cur_poz = 0;
+    for (short chunk = 0; chunk < nchunks; ++chunk, cur_poz += kBlock) {
+        unsigned cur_conf = 0;
+        for (short j = 0; j < changes.size(); ++j) {
+            cur_conf = cur_conf ^ message[cur_poz + changes[j]];
+            lin_comb[j+1] = cur_conf;
+        }
+        for (int i = 0; i < blocksize; ++i) {
+            int power = ReadBits(matrix, i, chunk);
+            res[i] = res[i] ^ lin_comb[grundy.getId(power)];
+        }
+    }
+    return res;
+}
+block LowMC::MultiplyWithGF2Matrix
+        (const std::vector<block>& matrix, const block& message, int r) {
+    block tmp;
+        if (kUseGrundy) {
+        tmp = GrundyMul(matrix, message);
+    } else {
+        tmp = ClassicMul(matrix, message);
+    }
+    return tmp;
+}
+
 
 block LowMC::MultiplyWithGF2Matrix_Key
-        (const std::vector<keyblock> matrix, const keyblock k) {
+        (const std::vector<keyblock>& matrix, const keyblock& k) {
     block temp = 0;
     for (unsigned i = 0; i < blocksize; ++i) {
-        temp[i] = (k & matrix[i]).count() % 2;
+        temp[i] = (k & matrix[i]).count() & 1;
     }
     return temp;
 }
@@ -143,7 +193,6 @@ void LowMC::instantiate_LowMC () {
         } while ( rank_of_Matrix_Key(mat) < std::min(blocksize, keysize) );
         KeyMatrices.push_back(mat);
     }
-    
     return;
 }
 
@@ -291,7 +340,6 @@ keyblock LowMC::getrandkeyblock () {
 // Is initialized with the all 1s state
 // The first 160 bits are thrown away
 bool LowMC::getrandbit () {
-    static std::bitset<80> state; //Keeps the 80 bit LSFR state
     bool tmp = 0;
     //If state has not been initialized yet
     if (state.none ()) {

@@ -4,28 +4,40 @@
 #include <bitset>
 #include <vector>
 #include <string>
+#include <iostream>
+#include "Grundy.h"
 
 const unsigned numofboxes = 49;    // Number of Sboxes
 const unsigned blocksize = 256;   // Block size in bits
 const unsigned keysize = 80; // Key size in bits
-const unsigned rounds = 13; // Number of rounds
-
+const unsigned rounds = 12; // Number of rounds
+const int kBlock = 4;
 const unsigned identitysize = blocksize - 3*numofboxes;
                   // Size of the identity part in the Sbox layer
 
 typedef std::bitset<blocksize> block; // Store messages and states
 typedef std::bitset<keysize> keyblock;
 
+typedef vector<vector<vector<int>>> vvvi;
 class LowMC {
 public:
-    LowMC (keyblock k = 0) {
+    LowMC (keyblock k = 0, bool flag=false): kUseGrundy(flag),grundy(kBlock) {
         key = k;
+        nchunks = blocksize / kBlock;
         instantiate_LowMC();
-        keyschedule();   
+        keyschedule();
+
+
+        _two_powers.assign(kBlock, 0);
+        for (int i = 0; i < kBlock; ++i) {
+            _two_powers[i] = (1 << i);
+        }
+        auto states = grundy.SolveGrundy();
+        changes = grundy.GetChanges();
     };
 
-    block encrypt (const block message);
-    block decrypt (const block message);
+    block encrypt (const block& message);
+    block decrypt (const block& message);
     void set_key (keyblock k);
     
 private:
@@ -47,18 +59,25 @@ private:
         // Stores the matrices that generate the round keys
     std::vector<block> roundkeys;
         // Stores the round keys
+    const bool kUseGrundy;
     
 // LowMC private functions //
-    block Substitution (const block message);
+    block Substitution (const block& message);
         // The substitution layer
-    block invSubstitution (const block message);
+    block invSubstitution (const block& message);
         // The inverse substitution layer
 
     block MultiplyWithGF2Matrix
-        (const std::vector<block> matrix, const block message);    
+        (const std::vector<block>& matrix, const block& message, int r);
+
+    block ClassicMul 
+        (const std::vector<block>& matrix, const block& message);    
+
+    block GrundyMul
+        (const std::vector<block>& matrix, const block& message);    
         // For the linear layer
     block MultiplyWithGF2Matrix_Key
-        (const std::vector<keyblock> matrix, const keyblock k);
+        (const std::vector<keyblock>& matrix, const keyblock& k);
         // For generating the round keys
 
     void keyschedule ();
@@ -66,7 +85,9 @@ private:
 
     void instantiate_LowMC ();
         //Fills the matrices and roundconstants with pseudorandom bits 
-   
+
+    int ReadBits(const vector<block>& matrix, int x, int y);
+
 // Binary matrix functions //   
     unsigned rank_of_Matrix (const std::vector<block> matrix);
     unsigned rank_of_Matrix_Key (const std::vector<keyblock> matrix);
@@ -76,6 +97,12 @@ private:
     block getrandblock ();
     keyblock getrandkeyblock ();
     bool  getrandbit ();
+    std::bitset<80> state;
+    vector<int> changes;
+    Grundy grundy;
+    bitset<kBlock> lin_comb;
+    vector<int> _two_powers;
+    int nchunks;
 
 };
 

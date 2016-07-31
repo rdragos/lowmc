@@ -5,11 +5,20 @@ OPTIM = -O3
 
 CPPFLAGS =-g -Wextra -Wall -Wno-non-template-friend $(OPTIM) -std=c++11
 
-OBJS=$(patsubst %.cpp,%.o,$(wildcard *.cpp))
+SRC1=test.cpp LowMC.cpp Grundy.cpp
 
-all: test.x
+OBJS=$(patsubst %.cpp,%.o,$(SRC1))
 
-test.x: test.cpp LowMC.cpp $(OBJS)
-	    $(CXX) $(LDFLAGS) -o test $(OBJS) $(LDLIBS)
+SRC2=test_grundy.cpp Grundy.cpp
+
+OBJS2=$(patsubst %.cpp,%.o,$(SRC2))
+
+all: test.x test_grundy.x
+
+test.x: test.cpp LowMC.cpp Grundy.cpp $(OBJS)
+	    $(CXX) $(LDFLAGS) -o test $(OBJS)
+
+test_grundy.x: test_grundy.cpp Grundy.cpp $(OBJS2)
+	    $(CXX) $(LDFLAGS) -o test_grundy $(OBJS2)
 clean:
 	    $(RM) $(OBJS)
