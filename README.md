@@ -13,3 +13,17 @@ the other parameters: the block size *n*, the number of S-boxes per layer *m*,
 the log2 of the allowed data complexity *d*, and the key size *k*.
 
 Example usage: `python3 determine_rounds.py 256 63 128 128`
+
+
+# LowMC Benchmarking
+
+run make;
+./test Encryptions russianFlag cacheSize graySize grayTables
+
+Using 4 russians method with a cache size of blocksize / 256 , Gray
+codes of 8 bit length and 1 Gray table
+
+./test 10000 1 256 8 1
+
+Encrypting 10000 with classic bitsets
+./test 10000 0 256 8 1

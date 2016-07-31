@@ -33,15 +33,18 @@ int main (int argc, char *argv[]) {
     // Example usage of the LowMC class
     // Instantiate a LowMC cipher instance called cipher using the key '1'.
     srand(time(0));
-    if (argc != 3) {
+    if (argc != 6) {
         cout << "Incorrect number of args!!!";
         return 0;
     }
     int ITER = atoi(argv[1]);
     int FLAG = atoi(argv[2]);
+    int CACHE_SIZE = atoi(argv[3]);
+    int KBLOCK = atoi(argv[4]);
+    int TABLES = atoi(argv[5]);
 
-    LowMC cipher1(1, FLAG);
-    LowMC cipher2(1, !FLAG);
+    LowMC cipher1(1, FLAG, CACHE_SIZE, KBLOCK, TABLES);
+    LowMC cipher2(1, !FLAG, CACHE_SIZE, KBLOCK, TABLES);
     vector<block> plains(ITER);
     for (int iter = 0; iter < ITER; ++iter) {
         // plains[iter] = get_random_block();
@@ -51,6 +54,7 @@ int main (int argc, char *argv[]) {
     gettimeofday(&totalstartv, NULL);
     for (int iter = 0; iter < ITER; ++iter) {
         block m1 = cipher1.encrypt(plains[iter]);
+        // cout << (m1 == cipher2.encrypt(plains[iter]));
     }
 
     gettimeofday(&totalendv, NULL);

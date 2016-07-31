@@ -11,7 +11,6 @@ const unsigned numofboxes = 49;    // Number of Sboxes
 const unsigned blocksize = 256;   // Block size in bits
 const unsigned keysize = 80; // Key size in bits
 const unsigned rounds = 12; // Number of rounds
-const int kBlock = 4;
 const unsigned identitysize = blocksize - 3*numofboxes;
                   // Size of the identity part in the Sbox layer
 
@@ -21,18 +20,29 @@ typedef std::bitset<keysize> keyblock;
 typedef vector<vector<vector<int>>> vvvi;
 class LowMC {
 public:
-    LowMC (keyblock k = 0, bool flag=false): kUseGrundy(flag),grundy(kBlock) {
+    LowMC (keyblock k = 0,
+        bool flag=false,
+        int _cache_size=blocksize,
+        int len_block = 2,
+        int cnt_tables = 1):
+        kBlock(len_block),
+        kTables(cnt_tables),
+        kUseGrundy(flag),grundy(len_block) {
+
         key = k;
         nchunks = blocksize / kBlock;
+        cache_size = _cache_size;
         instantiate_LowMC();
         keyschedule();
-
 
         _two_powers.assign(kBlock, 0);
         for (int i = 0; i < kBlock; ++i) {
             _two_powers[i] = (1 << i);
         }
+
         auto states = grundy.SolveGrundy();
+
+        lin_comb.assign(states.size(), 0);
         changes = grundy.GetChanges();
     };
 
@@ -74,7 +84,7 @@ private:
         (const std::vector<block>& matrix, const block& message);    
 
     block GrundyMul
-        (const std::vector<block>& matrix, const block& message);    
+        (const std::vector<block>& matrix, const block& message, int r);    
         // For the linear layer
     block MultiplyWithGF2Matrix_Key
         (const std::vector<keyblock>& matrix, const keyblock& k);
@@ -100,10 +110,14 @@ private:
     std::bitset<80> state;
     vector<int> changes;
     Grundy grundy;
-    bitset<kBlock> lin_comb;
+    vector<int> lin_comb;
     vector<int> _two_powers;
-    int nchunks;
+    int nchunks, cache_size;
+    const int kBlock;
+    const int kTables;
 
+
+    vvvi lpowers;
 };
 
 #endif

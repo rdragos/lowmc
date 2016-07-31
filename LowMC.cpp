@@ -104,30 +104,54 @@ int LowMC::ReadBits(const vector<block>& matrix, int x, int y) {
     }
     return res;
 }
-block LowMC::GrundyMul(const vector<block>& matrix, const block& message) {
+block LowMC::GrundyMul(const vector<block>& matrix, const block& message, int r) {
 
     bitset<blocksize> res;
 
+    int ncaches = blocksize / cache_size;
 
-    short cur_poz = 0;
-    for (short chunk = 0; chunk < nchunks; ++chunk, cur_poz += kBlock) {
-        unsigned cur_conf = 0;
-        for (short j = 0; j < changes.size(); ++j) {
-            cur_conf = cur_conf ^ message[cur_poz + changes[j]];
-            lin_comb[j+1] = cur_conf;
-        }
-        for (int i = 0; i < blocksize; ++i) {
-            int power = ReadBits(matrix, i, chunk);
-            res[i] = res[i] ^ lin_comb[grundy.getId(power)];
+    for (int start = 0; start < ncaches; ++start) {
+        for (int chunk = 0; chunk < nchunks; chunk += kTables) {
+            int row_block = start * cache_size;
+            int col_block = chunk * kBlock;
+
+
+            vector<vector<int>> bits(kTables, vector<int>(changes.size() + 1, 0));
+            for (int t = 0; t < kTables; ++t) {
+                for (int j = 0; j < changes.size(); ++j) {
+                    bits[t][j+1] = bits[t][j] ^ message[(chunk+t) * kBlock + changes[j]];
+                }
+            }
+            for (int s = 0; s < cache_size; ++s) {
+                //make use of cache
+                for (int t = 0; t < kTables; ++t) {
+                    int further = row_block + s;
+                    int power = lpowers[r][chunk+t][further];
+                    res[further] = res[further] ^ bits[t][grundy.getId(power)];
+                }
+            }
         }
     }
+
+    // short cur_poz = 0;
+    // for (short chunk = 0; chunk < nchunks; ++chunk, cur_poz += kBlock) {
+    //     unsigned cur_conf = 0;
+    //     for (short j = 0; j < changes.size(); ++j) {
+    //         cur_conf = cur_conf ^ message[cur_poz + changes[j]];
+    //         lin_comb[j+1] = cur_conf;
+    //     }
+    //     for (int i = 0; i < blocksize; ++i) {
+    //         int power = ReadBits(matrix, i, chunk*kBlock);
+    //         res[i] = res[i] ^ lin_comb[grundy.getId(power)];
+    //     }
+    // }
     return res;
 }
 block LowMC::MultiplyWithGF2Matrix
         (const std::vector<block>& matrix, const block& message, int r) {
     block tmp;
         if (kUseGrundy) {
-        tmp = GrundyMul(matrix, message);
+        tmp = GrundyMul(matrix, message, r);
     } else {
         tmp = ClassicMul(matrix, message);
     }
@@ -169,6 +193,18 @@ void LowMC::instantiate_LowMC () {
         // Repeat if matrix is not invertible
         } while ( rank_of_Matrix(mat) != blocksize );
         LinMatrices.push_back(mat);
+
+        vector<vector<int>> tmp(blocksize/kBlock, vector<int>(blocksize, 0));
+        for (int i = 0; i < blocksize; ++i) {
+            for (int chunk = 0; chunk < blocksize/kBlock; ++chunk) {
+                int conf = 0;
+                for (int j = 0; j < kBlock; ++j) {
+                    conf += (mat[i][chunk * kBlock + j]) * (1 << j);
+                }
+                tmp[chunk][i] = conf;
+            }
+        }
+        lpowers.push_back(tmp);
         invLinMatrices.push_back(invert_Matrix (LinMatrices.back()));
     }
 
