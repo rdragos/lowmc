@@ -104,7 +104,7 @@ int LowMC::ReadBits(const vector<block>& matrix, int x, int y) {
     }
     return res;
 }
-block LowMC::GrundyMul(const vector<block>& matrix, const block& message, int r) {
+block LowMC::GrayMul(const vector<block>& matrix, const block& message, int r) {
 
     bitset<blocksize> res;
 
@@ -127,31 +127,18 @@ block LowMC::GrundyMul(const vector<block>& matrix, const block& message, int r)
                 for (int t = 0; t < kTables; ++t) {
                     int further = row_block + s;
                     int power = lpowers[r][chunk+t][further];
-                    res[further] = res[further] ^ bits[t][grundy.getId(power)];
+                    res[further] = res[further] ^ bits[t][gray.getId(power)];
                 }
             }
         }
     }
-
-    // short cur_poz = 0;
-    // for (short chunk = 0; chunk < nchunks; ++chunk, cur_poz += kBlock) {
-    //     unsigned cur_conf = 0;
-    //     for (short j = 0; j < changes.size(); ++j) {
-    //         cur_conf = cur_conf ^ message[cur_poz + changes[j]];
-    //         lin_comb[j+1] = cur_conf;
-    //     }
-    //     for (int i = 0; i < blocksize; ++i) {
-    //         int power = ReadBits(matrix, i, chunk*kBlock);
-    //         res[i] = res[i] ^ lin_comb[grundy.getId(power)];
-    //     }
-    // }
     return res;
 }
 block LowMC::MultiplyWithGF2Matrix
         (const std::vector<block>& matrix, const block& message, int r) {
     block tmp;
-        if (kUseGrundy) {
-        tmp = GrundyMul(matrix, message, r);
+        if (kUseGray) {
+        tmp = GrayMul(matrix, message, r);
     } else {
         tmp = ClassicMul(matrix, message);
     }

@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 #include <iostream>
-#include "Grundy.h"
+#include "Gray.h"
 
 const unsigned numofboxes = 49;    // Number of Sboxes
 const unsigned blocksize = 256;   // Block size in bits
@@ -27,7 +27,7 @@ public:
         int cnt_tables = 1):
         kBlock(len_block),
         kTables(cnt_tables),
-        kUseGrundy(flag),grundy(len_block) {
+        kUseGray(flag),gray(len_block) {
 
         key = k;
         nchunks = blocksize / kBlock;
@@ -40,10 +40,10 @@ public:
             _two_powers[i] = (1 << i);
         }
 
-        auto states = grundy.SolveGrundy();
+        auto states = gray.SolveGray();
 
         lin_comb.assign(states.size(), 0);
-        changes = grundy.GetChanges();
+        changes = gray.GetChanges();
     };
 
     block encrypt (const block& message);
@@ -69,7 +69,7 @@ private:
         // Stores the matrices that generate the round keys
     std::vector<block> roundkeys;
         // Stores the round keys
-    const bool kUseGrundy;
+    const bool kUseGray;
     
 // LowMC private functions //
     block Substitution (const block& message);
@@ -83,7 +83,7 @@ private:
     block ClassicMul 
         (const std::vector<block>& matrix, const block& message);    
 
-    block GrundyMul
+    block GrayMul
         (const std::vector<block>& matrix, const block& message, int r);    
         // For the linear layer
     block MultiplyWithGF2Matrix_Key
@@ -109,7 +109,7 @@ private:
     bool  getrandbit ();
     std::bitset<80> state;
     vector<int> changes;
-    Grundy grundy;
+    Gray gray;
     vector<int> lin_comb;
     vector<int> _two_powers;
     int nchunks, cache_size;
