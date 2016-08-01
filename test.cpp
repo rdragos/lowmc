@@ -54,6 +54,14 @@ int main (int argc, char *argv[]) {
     gettimeofday(&totalstartv, NULL);
     for (int iter = 0; iter < ITER; ++iter) {
         block m1 = cipher1.encrypt(plains[iter]);
+        // cout << "Encryption of " << iter << "\n";
+        // for (int i = 0; i < blocksize; ++i) {
+        //     cout << m1[i];
+        // }
+        // cout << "\n";
+
+        // cout << "Is is true?: " << (m1 == cipher2.encrypt(plains[iter]));
+        // cout << "\n";
         // cout << (m1 == cipher2.encrypt(plains[iter]));
     }
 

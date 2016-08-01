@@ -61,14 +61,17 @@ void LowMC::set_key (keyblock k) {
 
 
 block LowMC::Substitution (const block& message) {
+    // cout << "big message: \n" << write<blocksize>(message) << "\n";
     block temp = 0;
     //Get the identity part of the message
     temp ^= (message >> 3*numofboxes);
     //Get the rest through the Sboxes
     for (unsigned i = 1; i <= numofboxes; ++i) {
         temp <<= 3;
-        temp ^= Sbox[ ((message >> 3*(numofboxes-i))
+
+        temp ^= Sbox[((message >> 3*(numofboxes-i))
                       & block(0x7)).to_ulong()];
+
     }
     return temp;
 }
@@ -122,9 +125,9 @@ block LowMC::GrayMul(const vector<block>& matrix, const block& message, int r) {
                     bits[t][j+1] = bits[t][j] ^ message[(chunk+t) * kBlock + changes[j]];
                 }
             }
-            for (int s = 0; s < cache_size; ++s) {
-                //make use of cache
-                for (int t = 0; t < kTables; ++t) {
+
+            for (int t = 0; t < kTables; ++t) {
+                for (int s = 0; s < cache_size; ++s) {
                     int further = row_block + s;
                     int power = lpowers[r][chunk+t][further];
                     res[further] = res[further] ^ bits[t][gray.getId(power)];
@@ -157,8 +160,14 @@ block LowMC::MultiplyWithGF2Matrix_Key
 
 void LowMC::keyschedule () {
     roundkeys.clear();
+    ofstream cout;
+    cout.open("matrices.out", ofstream::out | ofstream::app);
     for (unsigned r = 0; r <= rounds; ++r) {
         roundkeys.push_back( MultiplyWithGF2Matrix_Key (KeyMatrices[r], key) );
+        for (int i = 0; i < blocksize; ++i) {
+            cout << roundkeys.back()[i];
+        }
+        cout << "\n";
     }
     return;
 }
@@ -168,6 +177,12 @@ void LowMC::instantiate_LowMC () {
     // Create LinMatrices and invLinMatrices
     LinMatrices.clear();
     invLinMatrices.clear();
+
+    ofstream cout("matrices.out");
+    cout << "Rounds\n" << rounds << "\n";
+    cout << "Blocksize\n" << blocksize << "\n";
+    cout << "LinMatrices[rounds], Roundconstants[rounds], KeyMatrices[rounds+1] \n";
+
     for (unsigned r = 0; r < rounds; ++r) {
         // Create matrix
         std::vector<block> mat;
@@ -180,6 +195,13 @@ void LowMC::instantiate_LowMC () {
         // Repeat if matrix is not invertible
         } while ( rank_of_Matrix(mat) != blocksize );
         LinMatrices.push_back(mat);
+
+        for (int i = 0; i < blocksize; ++i) {
+            for (int j = 0; j < blocksize; ++j) {
+                cout << mat[i][j];
+            }
+            cout << "\n";
+        }
 
         vector<vector<int>> tmp(blocksize/kBlock, vector<int>(blocksize, 0));
         for (int i = 0; i < blocksize; ++i) {
@@ -201,6 +223,13 @@ void LowMC::instantiate_LowMC () {
         roundconstants.push_back( getrandblock () );
     }
 
+    for (auto el: roundconstants) {
+        for (int i = 0; i < blocksize; ++i) {
+            cout << el[i];
+        }
+        cout << "\n";
+    }
+
     // Create KeyMatrices
     KeyMatrices.clear();
     for (unsigned r = 0; r <= rounds; ++r) {
@@ -215,7 +244,15 @@ void LowMC::instantiate_LowMC () {
         // Repeat if matrix is not of maximal rank
         } while ( rank_of_Matrix_Key(mat) < std::min(blocksize, keysize) );
         KeyMatrices.push_back(mat);
+
+        for (int i = 0; i < blocksize; ++i) {
+            for (int j = 0; j < blocksize; ++j) {
+                cout << mat[i][j];
+            }
+            cout << "\n";
+        }
     }
+    cout.close();
     return;
 }
 
@@ -340,6 +377,7 @@ std::vector<block> LowMC::invert_Matrix (const std::vector<block> matrix) {
 
     return invmat;
 }
+
 
 ///////////////////////
 // Pseudorandom bits //

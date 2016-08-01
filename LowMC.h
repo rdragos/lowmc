@@ -10,7 +10,7 @@
 const unsigned numofboxes = 49;    // Number of Sboxes
 const unsigned blocksize = 256;   // Block size in bits
 const unsigned keysize = 80; // Key size in bits
-const unsigned rounds = 12; // Number of rounds
+const unsigned rounds = 13; // Number of rounds
 const unsigned identitysize = blocksize - 3*numofboxes;
                   // Size of the identity part in the Sbox layer
 
@@ -25,14 +25,17 @@ public:
         int _cache_size=blocksize,
         int len_block = 2,
         int cnt_tables = 1):
+
         kBlock(len_block),
         kTables(cnt_tables),
-        kUseGray(flag),gray(len_block) {
+        kUseGray(flag),
+        gray(len_block) {
 
         key = k;
         nchunks = blocksize / kBlock;
         cache_size = _cache_size;
         instantiate_LowMC();
+
         keyschedule();
 
         _two_powers.assign(kBlock, 0);
@@ -54,7 +57,7 @@ private:
 // LowMC private data members //
     // The Sbox and its inverse    
     const std::vector<unsigned> Sbox =
-        {0x00, 0x01, 0x03, 0x06, 0x07, 0x04, 0x05, 0x02};
+        {0x00, 0x07, 0x06, 0x05, 0x04, 0x01, 0x03, 0x02};
     const std::vector<unsigned> invSbox =
         {0x00, 0x01, 0x07, 0x02, 0x05, 0x06, 0x03, 0x04};
     std::vector<std::vector<block>> LinMatrices;
